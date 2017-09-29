@@ -40,35 +40,37 @@ fn main() {
         let mut imap_socket = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
         imap_socket.login(&CONFIG.mail.username, &CONFIG.mail.password).unwrap();
 
-        let path = Path::new(&CONFIG.mail.mailbox);
-        let mut uids: Vec<usize> = Vec::new();
+        for p in &CONFIG.publish {
+            let path = Path::new(&p.mailbox);
+            let mut uids: Vec<usize> = Vec::new();
 
-        println!("--- mailbox - {} ---", &path.as_str());
-        match imap_socket.select_from(&path) {
-            Ok(mailbox) => println!("Selected mailbox"),
-            Err(e) => println!("Error selecting INBOX: {}", e),
-        };
+            println!("--- mailbox - {} ---", &path.as_str());
+            match imap_socket.select_from(&path) {
+                Ok(mailbox) => println!("Selected mailbox"),
+                Err(e) => println!("Error selecting INBOX: {}", e),
+            };
 
-        println!("--- Search ---");
-        match imap_socket.search(vec![SEARCH::UNSEEN]) {
-            Ok(u) => {
-                println!("* SEARCH: {:?}", u);
-                uids = u
-            }
-            Err(e) => println!("Failed in searching for mail: {}", e),
-        };
-
-        println!("--- Fetch ---");
-
-        let fetch = imap_socket.fetch_ext(&uids);
-        match fetch {
-            Ok(mails) => {
-                post_mails(&mails, &CONFIG.slack.username, &CONFIG.slack.channel, &CONFIG.slack.emoji);
-                for mail in mails {
-                    imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
+            println!("--- Search ---");
+            match imap_socket.search(vec![SEARCH::UNSEEN]) {
+                Ok(u) => {
+                    println!("* SEARCH: {:?}", u);
+                    uids = u
                 }
-            },
-            Err(e) => println!("Failed to fetch: {}", e),
+                Err(e) => println!("Failed in searching for mail: {}", e),
+            };
+
+            println!("--- Fetch ---");
+
+            let fetch = imap_socket.fetch_ext(&uids);
+            match fetch {
+                Ok(mails) => {
+                    post_mails(&mails, &p.channel);
+                    for mail in mails {
+                        imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
+                    }
+                },
+                Err(e) => println!("Failed to fetch: {}", e),
+            }
         }
 
         imap_socket.logout().unwrap();

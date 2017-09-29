@@ -39,48 +39,62 @@ fn init() -> File {
 }
 
 fn write_config_template(f: &mut File) {
-    f.write_all(b"\
-    service = true\n\
-    sleep_time = 5   # unit is minutes
-    \n\
-    [mail]\n\
-    imap = 'imap.domain.com'\n\
-    port = 993\n\
-    username = 'my@mail.com'\n\
-    password = '*******'\n\
-    mailbox = 'Inbox'\n\
-    \n\
-    [slack]\n\
-    webhook = 'https://hooks.slack.com/services/xxx/yyy/zzz'\n\
-    username = 'BOT'\n\
-    channel = '#testing'\n\
-    emoji = '+1'\n\
-    ").expect(&format!("Failed to create a config file"))
+    let config = Config {
+        service: true,
+        sleep_time: 5,
+        mail: Mail {
+            imap: "imap.domain.com".to_string(),
+            port: 993,
+            username: "my@mail.com".to_string(),
+            password: "*******".to_string(),
+        },
+        slack: Slack {
+            webhook: "https://hooks.slack.com/services/xxx/yyy/zzz".to_string(),
+            username: "BOT".to_string(),
+            emoji: "+1".to_string(),
+        },
+        publish: vec![
+            Publish {
+            channel: "#testing".to_string(),
+            mailbox: "Inbox".to_string(),
+        }, Publish {
+            channel: "#general".to_string(),
+            mailbox: "Archive".to_string(),
+        }]
+    };
+
+    let toml = toml::to_string(&config).unwrap();
+    f.write_all(toml.as_bytes()).expect(&format!("Failed to create a config file"));
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Serialize)]
 pub struct Config {
     pub service: bool,
     pub sleep_time: u64,
     pub mail: Mail,
     pub slack: Slack,
+    pub publish: Vec<Publish>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Serialize)]
 pub struct Mail {
     pub imap: String,
     pub port: u16,
     pub username: String,
     pub password: String,
-    pub mailbox: String
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Serialize)]
 pub struct Slack {
     pub webhook: String,
     pub username: String,
-    pub channel: String,
     pub emoji: String,
+}
+
+#[derive(Deserialize,Serialize)]
+pub struct Publish {
+    pub channel: String,
+    pub mailbox: String,
 }
 
 lazy_static! {

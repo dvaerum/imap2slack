@@ -5,7 +5,7 @@ use self::slack_hook::{Slack, PayloadBuilder, AttachmentBuilder, Result};
 use imap_extention::fetch::*;
 use config::CONFIG;
 
-pub fn post_mails(mails: &Vec<Mail>, username: &str, channel: &str, emoji: &str) -> Result<()> {
+pub fn post_mails(mails: &Vec<Mail>, channel: &str) -> Result<()> {
     let slack = Slack::new(CONFIG.slack.webhook.as_str()).expect("Failed at connecting to the Slack Webhook");
 
     for mail in mails {
@@ -16,7 +16,7 @@ pub fn post_mails(mails: &Vec<Mail>, username: &str, channel: &str, emoji: &str)
                     .title(mail.subject.clone())
                     .text(mail.text.clone())
                     .build().unwrap()])
-            .channel(CONFIG.slack.channel.clone())
+            .channel(channel)
             .username(CONFIG.slack.username.clone())
             .icon_emoji(format!(":{}:", &CONFIG.slack.emoji))
             .build()
