@@ -64,7 +64,10 @@ fn main() {
             let fetch = imap_socket.fetch_ext(&uids);
             match fetch {
                 Ok(mails) => {
-                    post_mails(&mails, &p.channel);
+                    for mail in &mails {
+
+                        post_mails(mail, &p.channel);
+                    }
                     for mail in mails {
                         imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
                     }

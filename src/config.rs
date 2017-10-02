@@ -55,12 +55,12 @@ fn write_config_template(f: &mut File) {
         },
         publish: vec![
             Publish {
-            channel: "#testing".to_string(),
-            mailbox: "Inbox".to_string(),
-        }, Publish {
-            channel: "#general".to_string(),
-            mailbox: "Archive".to_string(),
-        }]
+                mailbox: "Inbox".to_string(),
+                channel: vec!["#testing_1".to_string(), "#testing_2".to_string()],
+            }, Publish {
+                mailbox: "Archive".to_string(),
+                channel: vec!["#general".to_string()],
+            }]
     };
 
     let toml = toml::to_string(&config).unwrap();
@@ -93,8 +93,8 @@ pub struct Slack {
 
 #[derive(Deserialize,Serialize)]
 pub struct Publish {
-    pub channel: String,
     pub mailbox: String,
+    pub channel: Vec<String>,
 }
 
 lazy_static! {
