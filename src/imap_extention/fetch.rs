@@ -21,6 +21,7 @@ pub struct Mail {
     pub text: String,
 }
 
+#[allow(dead_code)]
 impl Mail {
     fn print(&self) {
         println!("uid: {}\nflags: {}\nfrom: {}\nto: {}\ncc: {}\nbcc: {}\nreply_to: {}\nsubject: {}\ndate: {}\ntext: {}\n",

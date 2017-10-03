@@ -6,6 +6,7 @@ use std::string::String;
 use std::io::{Read,Write};
 use std::str::FromStr;
 
+#[allow(dead_code)]
 pub enum SEARCH {
     SEEN,
     UNSEEN,
