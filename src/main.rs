@@ -1,5 +1,5 @@
 extern crate imap;
-extern crate openssl;
+extern crate native_tls;
 extern crate regex;
 extern crate quoted_printable;
 #[macro_use]
@@ -9,10 +9,11 @@ extern crate toml;
 #[macro_use]
 extern crate serde_derive;
 
+
 use std::thread::sleep;
 use std::time::Duration;
 
-use openssl::ssl::{SslConnectorBuilder, SslMethod};
+use native_tls::TlsConnector;
 use imap::client::Client;
 
 mod imap_extention;
@@ -42,7 +43,7 @@ fn main() {
     let socket_addr = (domain, port);
 
     loop {
-        let ssl_connector = SslConnectorBuilder::new(SslMethod::tls()).unwrap().build();
+        let ssl_connector = TlsConnector::builder().unwrap().build().unwrap();
         let mut imap_socket = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
         imap_socket.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
 
@@ -50,22 +51,23 @@ fn main() {
             let path = Path::new(&publish.mailbox);
             let mut uids: Vec<usize> = Vec::new();
 
-            println!("--- mailbox - {} ---", &path.as_str());
+//            println!("--- mailbox - {} ---", &path.as_str());
             match imap_socket.select_from(&path) {
-                Ok(mailbox) => println!("Selected mailbox - '{}'", mailbox),
+//                Ok(mailbox) => println!("Selected mailbox - '{}'", mailbox),
+                Ok(mailbox) => (),
                 Err(e) => println!("Error selecting INBOX: {}", e),
             };
 
-            println!("--- Search ---");
+//            println!("--- Search ---");
             match imap_socket.search(vec![SEARCH::UNSEEN]) {
                 Ok(u) => {
-                    println!("* SEARCH: {:?}", u);
+//                    println!("* SEARCH: {:?}", u);
                     uids = u
                 }
                 Err(e) => println!("Failed in searching for mail: {}", e),
             };
 
-            println!("--- Fetch ---");
+//            println!("--- Fetch ---");
 
 
             let fetch = imap_socket.fetch_ext(&uids);
@@ -83,7 +85,7 @@ fn main() {
                             }
                         }
 
-                        imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
+//                        imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
                     }
                 },
                 Err(e) => println!("Failed to fetch: {}", e),

@@ -6,6 +6,7 @@ use std::string::String;
 use std::str::FromStr;
 use std::io::{Read,Write};
 use quoted_printable::{decode, ParseMode};
+use super::mailparse;
 
 #[derive(Debug)]
 pub struct Mail {
@@ -69,8 +70,24 @@ impl<T: Read + Write> Folder for Client<T> {
                         .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
                     let reply_to = Regex::new(r"(?i)(^R|\nR)eply-To: (?P<reply_to>.+?)\r?\n").unwrap().captures(header_fields_split.0)
                         .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
-                    let subject =  Regex::new(r"(?i)(^S|\nS)ubject:(?s) (?P<reply_to>(\r?\n\t?\s|.)+?)(\r?\n\w)").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().replace("\r\n ", " ").to_string());
+
+//                    let mut subject =  Regex::new(r"(?i)(^S|\nS)ubject:(?s) (?P<subject>(\r?\n\t?\s|.)+?)(\r?\n\w)").unwrap().captures(header_fields_split.0)
+//                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().replace("\r\n ", " ").to_string());;
+                    let mut subject =  Regex::new(r"(?i)(^S|\nS)ubject:(?s) (?P<subject>(\r?\n\t?\s|.)+?)(\r?\n\w)").unwrap().captures(header_fields_split.0)
+                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());;
+//                    println!("{:?}", subject);
+//                    let subject = format!("subject: {}", subject);
+                    let (subject_tmp, _) = mailparse::parse_headers(header_fields_split.0.as_bytes()).unwrap();
+//                    let subject = subject_tmp.get_value().unwrap();
+                    for mailheader in &subject_tmp {
+//                        println!("HEADER -> {}: {}", mailheader.get_key().unwrap(), mailheader.get_value().unwrap());
+                        if mailheader.get_key().unwrap().to_lowercase() ==  "subject" {
+                            subject = mailheader.get_value().unwrap();
+                        }
+                    }
+//                    println!("{:?}", subject);
+
+
                     let date =     Regex::new(r"(?i)(^D|\nD)ate: (?P<date>.+?)(\r?\n)").unwrap().captures(header_fields_split.0)
                         .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
 

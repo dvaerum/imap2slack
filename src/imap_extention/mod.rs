@@ -5,6 +5,8 @@
  * https://www.dovecot.org/imap-client-coding-howto.html
  */
 
+extern crate mailparse;
+
 pub mod folder;
 pub mod path;
 pub mod search;
