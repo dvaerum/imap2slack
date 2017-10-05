@@ -5,7 +5,8 @@ authors = ["nn <nn@nn.nn>"]
 
 [dependencies]
 imap = "*"
-openssl = "*"
+native-tls = "*"
+mailparse = "*"
 regex = "*"
 quoted_printable = "*"
 slack-hook = "*"
