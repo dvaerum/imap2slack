@@ -4,7 +4,8 @@ version = "0.1.2"
 authors = ["nn <nn@nn.nn>"]
 
 [dependencies]
-imap = "*"
+#imap = "*"
+imap = { path = "../rust-imap/" }
 native-tls = "*"
 mailparse = "*"
 regex = "*"

@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use native_tls::TlsConnector;
 use imap::client::Client;
+use imap::error::Error;
 
 mod imap_extention;
 use imap_extention::search::*;
@@ -44,7 +45,55 @@ fn main() {
 
     loop {
         let ssl_connector = TlsConnector::builder().unwrap().build().unwrap();
-        let mut imap_socket = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
+        let mut imap_socket: imap::client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
+        match Client::secure_connect(socket_addr, domain, ssl_connector) {
+            Ok(sock) => imap_socket = sock,
+            Err(e) => {
+                match e {
+                    /// An `io::Error` that occurred while trying to read or write to a network stream.
+                    Error::Io(io_error) => {
+                        println!("{:?}", io_error);
+                        ::std::process::exit(1);
+                    },
+                    /// An error from the `native_tls` library during the TLS handshake.
+                    Error::TlsHandshake(tls_handshake_error) => {
+                        println!("{:?}", tls_handshake_error);
+                        ::std::process::exit(1);
+                    },
+                    /// An error from the `native_tls` library while managing the socket.
+                    Error::Tls(tls_error) => {
+                        println!("{:?}", tls_error);
+                        ::std::process::exit(1);
+                    },
+                    /// A BAD response from the IMAP server.
+                    Error::BadResponse(response) => {
+                        println!("{:?}", response);
+                        ::std::process::exit(1);
+                    },
+                    /// A NO response from the IMAP server.
+                    Error::NoResponse(response) => {
+                        println!("{:?}", response);
+                        ::std::process::exit(1);
+                    },
+                    /// The connection was terminated unexpectedly.
+                    Error::ConnectionLost => {
+                        println!("Connection to the server has been lost");
+                        ::std::process::exit(1);
+                    },
+                    // Error parsing a server response.
+                    Error::Parse(parse_error) => {
+                        println!("{:?}", parse_error);
+                        ::std::process::exit(1);
+                    },
+                    // Error appending a mail
+                    Error::Append => {
+                        println!("Error appending a mail");
+                        ::std::process::exit(1);
+                    },
+                }
+            }
+        };
+
         imap_socket.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
 
         for publish in &DEFAULT.publish {
