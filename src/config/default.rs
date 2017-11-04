@@ -22,6 +22,7 @@ fn read_config(config_file: &str, config: Config) -> Config {
 pub struct Config {
     pub service: bool,
     pub sleep_time: u64,
+    pub mark_mail_as_read: Option<bool>,
     pub mail: Mail,
     pub slack: Slack,
     pub publish: Vec<Publish>,
@@ -91,6 +92,7 @@ fn config_template() -> Config {
     Config {
         service: true,
         sleep_time: 5,
+        mark_mail_as_read: Some(true),
         mail: Mail {
             imap: "imap.domain.com".to_string(),
             port: 993,

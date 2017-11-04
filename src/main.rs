@@ -134,7 +134,9 @@ fn main() {
                             }
                         }
 
-                        imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
+                        if Config.mark_mail_as_read.unwrap_or(true) {
+                            imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
+                        }
                     }
                 },
                 Err(e) => println!("Failed to fetch: {}", e),
