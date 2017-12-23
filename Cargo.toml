@@ -12,7 +12,7 @@ regex = "*"
 quoted_printable = "*"
 slack-hook = "*"
 url = "*"
-toml = "*"
+toml = { git = "https://github.com/dvarum12/toml-rs.git" }
 serde = "*"
 serde_derive = "*"
 lazy_static = "*"

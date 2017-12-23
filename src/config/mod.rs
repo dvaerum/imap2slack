@@ -38,6 +38,25 @@ fn init<'de, T>(filename: &str, config: T) -> File where T: Deserialize<'de> + S
     config_file
 }
 
+fn error_handler<T>(config: serde::export::Result<T, toml::de::Error>) -> T where T: self::serde::export::fmt::Debug {
+    if config.is_err() {
+        let error = &config.unwrap_err().inner;
+        match error.kind {
+            toml::de::ErrorKind::Custom => {
+                println!("You have to add the {}, in the section [{}] of the config file", error.message, error.key.first().unwrap());
+            }
+            _ => {
+                println!("-=( Un-handled error )=-");
+                println!("{:?}", error);
+            }
+        }
+
+        ::std::process::exit(1);
+    }
+
+    config.unwrap()
+}
+
 fn path_config_dir() -> PathBuf {
     let mut path_config_dir = home_dir().unwrap();
     path_config_dir.push(CONFIG_FOLDER);

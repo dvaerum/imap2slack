@@ -15,7 +15,7 @@ fn read_config(config_file: &str, config: Config) -> Config {
 
     let mut data = String::new();
     config_file.read_to_string(&mut data);
-    toml::from_str(&data).unwrap()
+    error_handler(toml::from_str(&data))
 }
 
 #[derive(Deserialize,Serialize,Clone,Debug)]
