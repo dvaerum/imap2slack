@@ -79,7 +79,7 @@ impl<T: Read + Write> Folder for Client<T> {
                     let text_fields_size = usize::from_str(&text_fields["size"]).unwrap();
                     let text_fields_split = text_fields["next"].split_at(text_fields_size);
 
-                    let tmp_text = String::from_utf8(decode(text_fields_split.0.replace("=\r\n", ""), ParseMode::Robust).unwrap()).unwrap();
+                    let tmp_text = String::from_utf8(decode(text_fields_split.0.replace("=\r\n", "").as_bytes(), ParseMode::Robust).unwrap()).unwrap();
 
 
 //                    print!("\n================================================\n{}{}===================================\n\n", header_fields_split.0, tmp_text);
