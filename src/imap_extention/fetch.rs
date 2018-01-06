@@ -36,16 +36,16 @@ impl Mail {
 }
 
 pub trait Folder {
-    fn fetch_ext(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>>;
+    fn fetch_lossy_ext(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>>;
 }
 
 impl<T: Read + Write> Folder for Client<T> {
-    fn fetch_ext(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>> {
+    fn fetch_lossy_ext(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>> {
         let mut r: Vec<Mail> = Vec::new();
 
         for sequence in sequence_set {
 
-            match self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])") {
+            match self.fetch_lossy(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])") {
                 Ok(responses) => {
                     let mut from = String::new();
                     let mut to = String::new();
@@ -54,7 +54,7 @@ impl<T: Read + Write> Folder for Client<T> {
                     let mut reply_to = String::new();
                     let mut subject = String::new();
                     let mut date = String::new();
-                    let mut text = String::new();
+                    let mut text: String;
 
                     let responses: String = responses.iter().map(|s| s.to_string()).collect();
 

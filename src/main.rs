@@ -24,8 +24,6 @@ use imap_extention::path::{Path, PathFrom};
 
 mod config;
 use config::DEFAULT;
-use config::FILTER;
-use config::filter::Filter;
 
 mod slack;
 use slack::post_mails;
@@ -50,32 +48,32 @@ fn main() {
             Ok(sock) => imap_socket = sock,
             Err(e) => {
                 match e {
-                    /// An `io::Error` that occurred while trying to read or write to a network stream.
+                    // An `io::Error` that occurred while trying to read or write to a network stream.
                     Error::Io(io_error) => {
                         println!("{:?}", io_error);
                         ::std::process::exit(1);
                     },
-                    /// An error from the `native_tls` library during the TLS handshake.
+                    // An error from the `native_tls` library during the TLS handshake.
                     Error::TlsHandshake(tls_handshake_error) => {
                         println!("{:?}", tls_handshake_error);
                         ::std::process::exit(1);
                     },
-                    /// An error from the `native_tls` library while managing the socket.
+                    // An error from the `native_tls` library while managing the socket.
                     Error::Tls(tls_error) => {
                         println!("{:?}", tls_error);
                         ::std::process::exit(1);
                     },
-                    /// A BAD response from the IMAP server.
+                    // A BAD response from the IMAP server.
                     Error::BadResponse(response) => {
                         println!("{:?}", response);
                         ::std::process::exit(1);
                     },
-                    /// A NO response from the IMAP server.
+                    // A NO response from the IMAP server.
                     Error::NoResponse(response) => {
                         println!("{:?}", response);
                         ::std::process::exit(1);
                     },
-                    /// The connection was terminated unexpectedly.
+                    // The connection was terminated unexpectedly.
                     Error::ConnectionLost => {
                         println!("Connection to the server has been lost");
                         ::std::process::exit(1);
@@ -85,6 +83,11 @@ fn main() {
                         println!("{:?}", parse_error);
                         ::std::process::exit(1);
                     },
+                    // Error validating input data
+                    Error::Validate(ValidateError) => {
+                        println!("{:?}", ValidateError);
+                        ::std::process::exit(1);
+                    }
                     // Error appending a mail
                     Error::Append => {
                         println!("Error appending a mail");
@@ -119,7 +122,7 @@ fn main() {
 //            println!("--- Fetch ---");
 
 
-            let fetch = imap_socket.fetch_ext(&uids);
+            let fetch = imap_socket.fetch_lossy_ext(&uids);
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {

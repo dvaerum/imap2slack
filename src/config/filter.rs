@@ -1,13 +1,6 @@
 use super::*;
 
-use std::env::home_dir;
-use std::fs::{create_dir_all,File};
-use std::path::Path;
-
-use serde_derive;
-use lazy_static;
-
-use toml::value::{Array, Table};
+use std::fs::{File};
 
 use std::collections::BTreeMap;
 
@@ -20,6 +13,8 @@ lazy_static! {
 }
 
 fn read_config(config_file: &str, config: Config) -> Config {
+    use std::io::Read;
+
     let mut config_file = init(config_file, config);
 
     let mut data = String::new();

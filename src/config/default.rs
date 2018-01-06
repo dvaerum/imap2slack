@@ -1,7 +1,5 @@
 use super::*;
 
-use std::collections::BTreeMap;
-
 static CONFIG_FILE: &'static str = "default.toml";
 
 lazy_static! {
@@ -11,6 +9,8 @@ lazy_static! {
 }
 
 fn read_config(config_file: &str, config: Config) -> Config {
+    use std::io::Read;
+
     let mut config_file = init(config_file, config);
 
     let mut data = String::new();

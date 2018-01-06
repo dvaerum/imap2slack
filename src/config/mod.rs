@@ -7,8 +7,8 @@ pub use self::filter::CONFIG as FILTER;
 
 use std::env::home_dir;
 use std::fs::{create_dir_all,File};
-use std::io::{Read,Write};
-use std::path::{Path,PathBuf};
+use std::io::Write;
+use std::path::{PathBuf};
 
 use toml;
 
@@ -19,7 +19,7 @@ static CONFIG_FOLDER: &'static str = ".config/imap2slack";
 
 fn init<'de, T>(filename: &str, config: T) -> File where T: Deserialize<'de> + Serialize + WriteConfig {
     let path_config_file = path_config_file(filename);
-    let mut config_file: File;
+    let config_file: File;
 
     let path_config_dir = path_config_dir();
     create_dir_all(path_config_dir.as_path()).expect(&format!("Failed to create the directory '{}'", path_config_file.to_str().unwrap()));
