@@ -72,8 +72,8 @@ impl<T: Read + Write> Folder for Client<T> {
                                 .captures(&string)
                                 .expect("Something went wrong with finding UID and FLAGS from the fetched mail");
 
-                            let uid = usize::from_str(&uid_and_flags["uid"]).unwrap();
-                            let flags: String = String::from(&uid_and_flags["flags"]);
+                            uid = usize::from_str(&uid_and_flags["uid"]).unwrap();
+                            flags = String::from(&uid_and_flags["flags"]);
 
 //                            println!("---===( uid: {} )===---", uid);
 //                            println!("---===( flags: {} )===---", flags);
