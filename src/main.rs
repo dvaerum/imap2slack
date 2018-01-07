@@ -45,7 +45,10 @@ fn main() {
         let ssl_connector = TlsConnector::builder().unwrap().build().unwrap();
         let mut imap_socket: imap::client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
         match Client::secure_connect(socket_addr, domain, ssl_connector) {
-            Ok(sock) => imap_socket = sock,
+            Ok(mut sock) => {
+                sock.debug = DEFAULT.debug();
+                imap_socket = sock
+            },
             Err(e) => {
                 match e {
                     // An `io::Error` that occurred while trying to read or write to a network stream.
@@ -122,7 +125,7 @@ fn main() {
 //            println!("--- Fetch ---");
 
 
-            let fetch = imap_socket.fetch_lossy_ext(&uids);
+            let fetch = imap_socket.fetch_mail(&uids);
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {
@@ -137,7 +140,7 @@ fn main() {
                             }
                         }
 
-                        if DEFAULT.mark_mail_as_seen.unwrap_or(true) {
+                        if DEFAULT.mark_mail_as_seen() {
                             imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
                         }
                     }

@@ -22,10 +22,21 @@ fn read_config(config_file: &str, config: Config) -> Config {
 pub struct Config {
     pub service: bool,
     pub sleep_time: u64,
-    pub mark_mail_as_seen: Option<bool>, // Should be true by default
+    mark_mail_as_seen: Option<bool>, // Should be true by default
+    debug: Option<bool>, // Should be false default
     pub mail: Mail,
     pub slack: Slack,
     pub publish: Vec<Publish>,
+}
+
+impl Config {
+    pub fn mark_mail_as_seen(&self) -> bool {
+        self.mark_mail_as_seen.unwrap_or(true)
+    }
+
+    pub fn debug(&self) -> bool {
+        self.debug.unwrap_or(false)
+    }
 }
 
 #[derive(Deserialize,Serialize,Clone,Debug)]
@@ -93,6 +104,7 @@ fn config_template() -> Config {
         service: true,
         sleep_time: 5,
         mark_mail_as_seen: Some(true),
+        debug: Some(false),
         mail: Mail {
             imap: "imap.domain.com".to_string(),
             port: 993,
