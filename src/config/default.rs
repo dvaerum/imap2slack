@@ -70,7 +70,7 @@ impl Publish {
                     None => {
                         let mut config = FILTER.clone();
                         config.filter.insert(f.to_string(), filter::Filter {
-                            case_sensative: false,
+                            case_sensitive: false,
                             contains: Some(vec!["".to_string()]),
                             does_not_contains: Some(vec!["".to_string()]),
                         });
