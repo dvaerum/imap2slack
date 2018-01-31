@@ -6,7 +6,9 @@ use std::string::String;
 use std::str::FromStr;
 use std::io::{Read,Write};
 use quoted_printable::{decode, ParseMode};
-use super::mailparse;
+use super::mailparse::{self, MailHeader, ParsedContentType, ParsedMail};
+use std::collections::HashMap;
+use config::DEFAULT;
 
 #[derive(Debug)]
 pub struct Mail {
@@ -20,6 +22,33 @@ pub struct Mail {
     pub subject: String,
     pub date: String,
     pub text: String,
+}
+
+struct MailBodyPart {
+    headers: HashMap<String, String>,
+    ctype: ParsedContentType,
+    body: String,
+}
+
+fn find_mail_body_parts(mbp: &mut Vec<MailBodyPart>, mail_body: ParsedMail) {
+    let ctype = mail_body.ctype.mimetype.to_lowercase();
+
+    if ctype.contains("multipart/") {
+        for subpart in mail_body.subparts {
+            find_mail_body_parts(mbp, subpart);
+        }
+    } else if ctype.contains("text/plain") {
+        let mut headers = HashMap::new();
+        for header in &mail_body.headers {
+            headers.insert(header.get_key().unwrap(), header.get_value().unwrap());
+        }
+
+        mbp.push(MailBodyPart{
+            headers: headers,
+            body: mail_body.get_body().unwrap(),
+            ctype: mail_body.ctype,
+        });
+    }
 }
 
 #[allow(dead_code)]
@@ -106,11 +135,7 @@ impl<T: Read + Write> Folder for Client<T> {
                         }
                     }
 
-//                    println!("---===( fetched mail )===---\n{}", String::from_utf8_lossy(&mail_buffer));
-
                     let mail = mailparse::parse_mail(&mail_buffer).unwrap();
-//                    let (subject_tmp, _) = mailparse::parse_headers(header_fields_split.0.as_bytes()).unwrap();
-                    //                    let subject = subject_tmp.get_value().unwrap();
 
                     for header in &mail.headers {
 //                        println!("HEADER -> {}: {}", header.get_key().unwrap(), header.get_value().unwrap());
@@ -130,33 +155,22 @@ impl<T: Read + Write> Folder for Client<T> {
                         }
                     }
 
-                    // This piece of code is used for debugging
-//                    let tmp = mail.get_body().expect("Fail to pass the BODY of the mail and error handling is needed");
-//                    println!("\n==============( mail.get_body() - size: {} )===================\n{}\n\n", tmp.len(), tmp);
-//                    for i in 0..mail.subparts.len() {
-//                        println!("\n==============( subpart {} out of {} )===================", i+1, mail.subparts.len());
-//                        for header in &mail.subparts[i].headers {
-//                            println!("HEADER -> {}: {}", header.get_key().unwrap(), header.get_value().unwrap());
-//                        }
-//                        println!("--==( BODY )==--");
-//                        println!("{}", mail.subparts[i].get_body().expect("Fail to pass the BODY of the mail and error handling is needed"));
-//                    }
+                    let mut mail_body_parts: Vec<MailBodyPart> = Vec::new();
+                    find_mail_body_parts(&mut mail_body_parts, mail);
 
-                    text = mail.get_body().expect("Fail to pass the BODY of the mail and error handling is needed");
-                    if text.len() == 0 {
-                        for i in 0..mail.subparts.len() {
-                            let mut content_type = String::new();
-                            for header in &mail.subparts[i].headers {
-                                if header.get_key().unwrap().to_lowercase() == "content-type" {
-                                    content_type = header.get_value().unwrap().to_lowercase();
-                                }
-                            }
+                    if DEFAULT.debug() {
+                        for i in 0..mail_body_parts.len() {
+                            println!("---===( subpart {} )===---", i);
+                            println!("headers: {:?}", &mail_body_parts[i].headers);
+                            println!("ctype: {:?}", &mail_body_parts[i].ctype);
+                            println!("body.len: {}", &mail_body_parts[i].body.len());
+                            println!("");
+                        }
+                    }
 
-                            if content_type.len() == 0 {
-                                panic!("This mail don't have the Content-Type header, figure out have to handle it");
-                            } else if content_type.contains("text/plain") {
-                                text = mail.subparts[i].get_body().expect("Fail to pass the BODY of the mail and error handling is needed");
-                            }
+                    for mail_body_part in mail_body_parts {
+                        if mail_body_part.ctype.mimetype.contains("text/plain") {
+                            text = mail_body_part.body;
                         }
                     }
 
