@@ -5,8 +5,7 @@ use std::vec::Vec;
 use std::string::String;
 use std::str::FromStr;
 use std::io::{Read,Write};
-use quoted_printable::{decode, ParseMode};
-use super::mailparse::{self, MailHeader, ParsedContentType, ParsedMail};
+use super::mailparse::{self, ParsedContentType, ParsedMail};
 use std::collections::HashMap;
 use config::DEFAULT;
 
@@ -74,7 +73,9 @@ impl<T: Read + Write> Folder for Client<T> {
 
         for sequence in sequence_set {
 
-            match self.fetch_raw(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])") {
+            let fetch = self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])");
+            println!("test_1: {:?}", fetch);
+            match fetch {
                 Ok(mut responses) => {
                     let mut uid = 0;
                     let mut flags = String::new();
@@ -90,6 +91,8 @@ impl<T: Read + Write> Folder for Client<T> {
 
                     let mut mail_buffer: Vec<u8> = Vec::new();
                     let mut counter: usize = 0;
+
+                    println!("test_2: {:?}", &responses);
 
                     while counter < responses.len() {
                         let string = String::from_utf8(responses[counter].clone()).unwrap();

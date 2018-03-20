@@ -19,15 +19,17 @@ pub trait Search {
 impl<T: Read + Write> Search for Client<T> {
     fn search(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>> {
         let criteria: String = filter.iter().map(|s| format!("{} ", search2str(s))).collect();
-        match self.run_command_and_read_response(&format!("SEARCH {}", criteria.trim())) {
+        let search_result = self.run_command_and_read_response(&format!("SEARCH {}", criteria.trim()));
+        println!("{:?}", &search_result);
+        match search_result {
             Ok(response) => {
                 let mut uids: Vec<usize> = Vec::new();
 
-                for l in response {
-                    if l.to_uppercase().contains("SEARCH") {
-                        for uid in Regex::new(r"(?P<uid>\d+)").unwrap().captures_iter(&l) {
-                            uids.push(usize::from_str(&uid["uid"]).unwrap());
-                        }
+                let response = String::from_utf8(response).expect("Failed to convert 'Vec<u8>' to 'String', but this should not happen");
+                println!("{}", &response);
+                if response.to_uppercase().contains("SEARCH") {
+                    for uid in Regex::new(r"(?P<uid>\d+)").unwrap().captures_iter(&response) {
+                        uids.push(usize::from_str(&uid["uid"]).unwrap());
                     }
                 }
 
