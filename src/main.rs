@@ -46,7 +46,7 @@ fn main() {
         let mut imap_socket: imap::client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
         match Client::secure_connect(socket_addr, domain, ssl_connector) {
             Ok(mut sock) => {
-                sock.debug = DEFAULT.debug();
+                sock.debug = DEFAULT.debug_imap();
                 imap_socket = sock
             },
             Err(e) => {
@@ -113,19 +113,21 @@ fn main() {
                 Err(e) => println!("Error selecting INBOX: {}", e),
             };
 
-//            println!("--- Search ---");
             match imap_socket.search(vec![SEARCH::UNSEEN]) {
                 Ok(u) => {
-//                    println!("* SEARCH: {:?}", u);
+                    if DEFAULT.debug() {
+                        println!("---===( Search )===---\n{:?}", &u);
+                    }
                     uids = u
                 }
                 Err(e) => println!("Failed in searching for mail: {}", e),
             };
 
-//            println!("--- Fetch ---");
-
-
+            if DEFAULT.debug() {
+                println!("---===( Fetch )===---");
+            }
             let fetch = imap_socket.fetch_mail(&uids);
+            println!("{:?}", &fetch);
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {

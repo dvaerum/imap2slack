@@ -24,6 +24,7 @@ pub struct Config {
     pub sleep_time: u64,
     mark_mail_as_seen: Option<bool>, // Should be true by default
     debug: Option<bool>, // Should be false default
+    debug_imap: Option<bool>, // Should be false default
     pub mail: Mail,
     pub slack: Slack,
     pub publish: Vec<Publish>,
@@ -36,6 +37,10 @@ impl Config {
 
     pub fn debug(&self) -> bool {
         self.debug.unwrap_or(false)
+    }
+
+    pub fn debug_imap(&self) -> bool {
+        self.debug_imap.unwrap_or(false)
     }
 }
 
@@ -105,6 +110,7 @@ fn config_template() -> Config {
         sleep_time: 5,
         mark_mail_as_seen: Some(true),
         debug: Some(false),
+        debug_imap: Some(false),
         mail: Mail {
             imap: "imap.domain.com".to_string(),
             port: 993,
