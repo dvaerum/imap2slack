@@ -5,10 +5,10 @@ use std::vec::Vec;
 use std::string::String;
 use std::str::FromStr;
 use std::io::{Read,Write};
-use quoted_printable::{decode, ParseMode};
-use super::mailparse::{self, MailHeader, ParsedContentType, ParsedMail};
+use super::mailparse::{self, ParsedContentType, ParsedMail};
 use std::collections::HashMap;
 use config::DEFAULT;
+use imap::client::Session;
 
 #[derive(Debug)]
 pub struct Mail {
@@ -68,13 +68,16 @@ pub trait Folder {
     fn fetch_mail(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>>;
 }
 
-impl<T: Read + Write> Folder for Client<T> {
+impl<T: Read + Write> Folder for Session<T> {
     fn fetch_mail(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>> {
         let mut r: Vec<Mail> = Vec::new();
 
         for sequence in sequence_set {
 
-            match self.fetch_raw(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])") {
+//            let fetch = self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])");
+            let fetch = self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[])");
+//            println!("test_1: {:?}", fetch);
+            match fetch {
                 Ok(mut responses) => {
                     let mut uid = 0;
                     let mut flags = String::new();
@@ -88,52 +91,60 @@ impl<T: Read + Write> Folder for Client<T> {
                     let mut text: String = String::new();
 
 
-                    let mut mail_buffer: Vec<u8> = Vec::new();
                     let mut counter: usize = 0;
 
-                    while counter < responses.len() {
-                        let string = String::from_utf8(responses[counter].clone()).unwrap();
+//                    println!("====================================================");
+//                    println!("test_2: {:?}", (*responses)[0].body().unwrap());
+//                    println!("====================================================");
+//                    println!("====================================================");
+//                    println!("test_2: {}", String::from_utf8_lossy((*responses)[0].body().unwrap()));
+//                    println!("====================================================");
+
+                    let mut mail_buffer: Vec<u8> = (*responses)[0].body().unwrap().to_vec();
+
+//                    while counter < responses.len() {
+//                        let string = String::from_utf8(responses[counter].body().unwrap().to_vec()).unwrap();
 //                        print!("{}", String::from_utf8_lossy(&responses[counter]));
 
-                        if string.starts_with("*") {
-                            let uid_and_flags = Regex::new(r#"[*][ ]+(?P<uid>\d+)[ ]+FETCH[ ]+\(FLAGS \((?P<flags>[^)]+)\)"#)
-                                .unwrap()
-                                .captures(&string)
-                                .expect("Something went wrong with finding UID and FLAGS from the fetched mail");
+//                        if string.starts_with("*") {
+//                            let uid_and_flags = Regex::new(r#"[*][ ]+(?P<uid>\d+)[ ]+FETCH[ ]+\(FLAGS \((?P<flags>[^)]+)\)"#)
+//                                .unwrap()
+//                                .captures(&string)
+//                                .expect("Something went wrong with finding UID and FLAGS from the fetched mail");
+//
+//                            uid = usize::from_str(&uid_and_flags["uid"]).unwrap();
+//                            flags = String::from(&uid_and_flags["flags"]);
+//
+////                            println!("---===( uid: {} )===---", uid);
+////                            println!("---===( flags: {} )===---", flags);
+//                        }
+//
+//                        let body_size = usize::from_str( Regex::new(r#"BODY\[[^\]]+\][ ]+\{(?P<size>\d+)\}"#)
+//                            .unwrap()
+//                            .captures(&string)
+////                            .expect("Something went wrong with finding the size of BODY in the fetched mail");
+//                            .map_or( "0", |s| s.name("size").map_or("0", |s| s.as_str()))).unwrap();
+////                        println!("---===( size: {} )===---", body_size);
 
-                            uid = usize::from_str(&uid_and_flags["uid"]).unwrap();
-                            flags = String::from(&uid_and_flags["flags"]);
-
-//                            println!("---===( uid: {} )===---", uid);
-//                            println!("---===( flags: {} )===---", flags);
-                        }
-
-                        let body_size = usize::from_str( Regex::new(r#"BODY\[[^\]]+\][ ]+\{(?P<size>\d+)\}"#)
-                            .unwrap()
-                            .captures(&string)
-//                            .expect("Something went wrong with finding the size of BODY in the fetched mail");
-                            .map_or( "0", |s| s.name("size").map_or("0", |s| s.as_str()))).unwrap();
-//                        println!("---===( size: {} )===---", body_size);
-
-                        counter += 1;
-
-                        if body_size > 0 {
-                            let mut body_counter = 0;
-                            while body_counter < body_size {
-                                if body_counter + responses[counter].len() <= body_size {
-                                    body_counter += responses[counter].len();
-//                                    print!("{}", String::from_utf8_lossy(&responses[counter]));
-                                    mail_buffer.append(responses[counter].as_mut());
-                                } else {
-                                    body_counter += responses[counter].len();
-                                    let (left, right) = responses[counter].split_at(body_size - body_counter);
-//                                    println!("{}", String::from_utf8_lossy(&left));
-                                    mail_buffer.extend_from_slice(left);
-                                }
-                                counter += 1;
-                            }
-                        }
-                    }
+//                        counter += 1;
+//
+//                        if body_size > 0 {
+//                            let mut body_counter = 0;
+//                            while body_counter < body_size {
+//                                if body_counter + responses[counter].len() <= body_size {
+//                                    body_counter += responses[counter].len();
+////                                    print!("{}", String::from_utf8_lossy(&responses[counter]));
+//                                    mail_buffer.append(responses[counter].as_mut());
+//                                } else {
+//                                    body_counter += responses[counter].len();
+//                                    let (left, right) = responses[counter].split_at(body_size - body_counter);
+////                                    println!("{}", String::from_utf8_lossy(&left));
+//                                    mail_buffer.extend_from_slice(left);
+//                                }
+//                                counter += 1;
+//                            }
+//                        }
+//                    }
 
                     let mail = mailparse::parse_mail(&mail_buffer).unwrap();
 

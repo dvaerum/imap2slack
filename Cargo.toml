@@ -5,14 +5,15 @@ authors = ["nn <nn@nn.nn>"]
 
 [dependencies]
 #imap = "*"
-imap = { git = "https://github.com/dvarum12/rust-imap.git" }
+imap = { git = "https://github.com/mattnenterprise/rust-imap.git" }
+#imap = { path = "../rust-imap" }
 native-tls = "*"
 mailparse = "*"
 regex = "*"
 quoted_printable = "*"
 slack-hook = "*"
 url = "*"
-toml = { git = "https://github.com/dvarum12/toml-rs.git" }
+toml = { git = "https://github.com/dvaerum/toml-rs.git" }
 serde = "*"
 serde_derive = "*"
 lazy_static = "*"
