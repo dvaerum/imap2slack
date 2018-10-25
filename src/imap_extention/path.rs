@@ -5,6 +5,7 @@ use imap::client::Client;
 use std::io::{Read,Write};
 use std::str::FromStr;
 use imap::Mailbox;
+use imap::client::Session;
 
 #[allow(dead_code)]#[derive(Debug)]
 pub struct Status {
@@ -51,7 +52,7 @@ pub trait PathFrom {
     fn select_from(&mut self, path: &Path) -> Result<Mailbox>;
 }
 
-impl<T: Read + Write> PathFrom for Client<T>{
+impl<T: Read + Write> PathFrom for Session<T>{
     fn select_from(&mut self, path: &Path) -> Result<Mailbox> {
         self.select(path.as_str())
     }

@@ -5,6 +5,7 @@ use std::vec::Vec;
 use std::string::String;
 use std::io::{Read,Write};
 use std::str::FromStr;
+use imap::client::Session;
 
 #[allow(dead_code)]
 pub enum SEARCH {
@@ -13,14 +14,14 @@ pub enum SEARCH {
 }
 
 pub trait Search {
-    fn search(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>>;
+    fn search2(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>>;
 }
 
-impl<T: Read + Write> Search for Client<T> {
-    fn search(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>> {
+impl<T: Read + Write> Search for Session<T> {
+    fn search2(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>> {
         let criteria: String = filter.iter().map(|s| format!("{} ", search2str(s))).collect();
         let search_result = self.run_command_and_read_response(&format!("SEARCH {}", criteria.trim()));
-        println!("{:?}", &search_result);
+        println!("Search; {:?}", &search_result);
         match search_result {
             Ok(response) => {
                 let mut uids: Vec<usize> = Vec::new();

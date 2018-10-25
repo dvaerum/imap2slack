@@ -4,8 +4,8 @@ version = "0.1.4"
 authors = ["nn <nn@nn.nn>"]
 
 [dependencies]
-imap = "*"
-#imap = { git = "https://github.com/dvaerum/rust-imap.git" }
+#imap = "*"
+imap = { git = "https://github.com/mattnenterprise/rust-imap.git" }
 #imap = { path = "../rust-imap" }
 native-tls = "*"
 mailparse = "*"

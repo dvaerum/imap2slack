@@ -14,7 +14,7 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use native_tls::TlsConnector;
-use imap::client::Client;
+use imap::client;
 use imap::error::Error;
 
 mod imap_extention;
@@ -42,9 +42,9 @@ fn main() {
     let socket_addr = (domain, port);
 
     loop {
-        let ssl_connector = TlsConnector::builder().unwrap().build().unwrap();
-        let mut imap_socket: imap::client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
-        match Client::secure_connect(socket_addr, domain, ssl_connector) {
+        let ssl_connector = TlsConnector::builder().build().unwrap();
+        let mut imap_socket: client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
+        match client::secure_connect(socket_addr, domain, &ssl_connector) {
             Ok(mut sock) => {
                 sock.debug = DEFAULT.debug_imap();
                 imap_socket = sock
@@ -100,20 +100,20 @@ fn main() {
             }
         };
 
-        imap_socket.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
+        let mut session = imap_socket.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
 
         for publish in &DEFAULT.publish {
             let path = Path::new(&publish.mailbox);
             let mut uids: Vec<usize> = Vec::new();
 
-//            println!("--- mailbox - {} ---", &path.as_str());
-            match imap_socket.select_from(&path) {
+            println!("--- mailbox - {} ---", &path.as_str());
+            match session.select_from(&path) {
 //                Ok(mailbox) => println!("Selected mailbox - '{}'", mailbox),
                 Ok(mailbox) => (),
                 Err(e) => println!("Error selecting INBOX: {}", e),
             };
 
-            match imap_socket.search(vec![SEARCH::UNSEEN]) {
+            match session.search2(vec![SEARCH::UNSEEN]) {
                 Ok(u) => {
                     if DEFAULT.debug() {
                         println!("---===( Search )===---\n{:?}", &u);
@@ -126,7 +126,7 @@ fn main() {
             if DEFAULT.debug() {
                 println!("---===( Fetch )===---");
             }
-            let fetch = imap_socket.fetch_mail(&uids);
+            let fetch = session.fetch_mail(&uids);
             println!("{:?}", &fetch);
             match fetch {
                 Ok(mails) => {
@@ -143,7 +143,7 @@ fn main() {
                         }
 
                         if DEFAULT.mark_mail_as_seen() {
-                            imap_socket.store(&mail.uid.to_string(), r"+FLAGS \Seen");
+                            session.store(&mail.uid.to_string(), r"+FLAGS \Seen");
                         }
                     }
                 },
@@ -151,7 +151,7 @@ fn main() {
             }
         }
 
-        imap_socket.logout().unwrap();
+        session.logout().unwrap();
 
         if DEFAULT.service {
             sleep(Duration::new(DEFAULT.sleep_time * 60, 0));
