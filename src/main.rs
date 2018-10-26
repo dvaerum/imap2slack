@@ -143,6 +143,7 @@ fn main() {
                         }
 
                         if DEFAULT.mark_mail_as_seen() {
+                            println!("mark mail as see: {}", &mail.uid);
                             session.store(&mail.uid.to_string(), r"+FLAGS \Seen");
                         }
                     }
