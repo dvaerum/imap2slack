@@ -3,9 +3,8 @@ extern crate serde;
 pub mod default;
 pub mod filter;
 pub use self::default::CONFIG as DEFAULT;
-pub use self::filter::CONFIG as FILTER;
+pub use self::filter::FILTER;
 
-use std::env::home_dir;
 use std::fs::{create_dir_all,File};
 use std::io::Write;
 use std::path::{PathBuf};
@@ -58,6 +57,8 @@ fn error_handler<T>(config: serde::export::Result<T, toml::de::Error>) -> T wher
 }
 
 fn path_config_dir() -> PathBuf {
+    use std::env::home_dir;
+
     let mut path_config_dir = home_dir().unwrap();
     path_config_dir.push(CONFIG_FOLDER);
     path_config_dir

@@ -1,9 +1,6 @@
 use std::string::String;
 use imap::error::Result;
-use regex::Regex;
-use imap::client::Client;
 use std::io::{Read,Write};
-use std::str::FromStr;
 use imap::Mailbox;
 use imap::client::Session;
 

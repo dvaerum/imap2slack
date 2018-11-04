@@ -1,7 +1,5 @@
 use super::*;
 
-use std::collections::BTreeMap;
-
 static CONFIG_FILE: &'static str = "default.toml";
 
 lazy_static! {
@@ -69,27 +67,8 @@ pub struct Publish {
 }
 
 impl Publish {
-    pub fn filter(&self) -> Option<&filter::Filter> {
-        match &self.filter {
-            &Some(ref f) => {
-                match FILTER.filter.get(f) {
-                    Some(filter) => return Some(filter),
-                    None => {
-                        let mut config = FILTER.clone();
-                        config.filter.insert(f.to_string(), filter::Filter {
-                            case_sensitive: false,
-                            contains: Some(vec!["".to_string()]),
-                            does_not_contains: Some(vec!["".to_string()]),
-                        });
-
-                        println!("The filter '{}' was missing, but a empty filter has been add. However you still need to", f);
-                        config.write();
-                        ::std::process::exit(1);
-                    },
-                }
-            },
-            &None => None
-        }
+    pub fn filter(&self) -> Option<&String> {
+        self.filter.as_ref()
     }
 }
 

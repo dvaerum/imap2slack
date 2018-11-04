@@ -1,7 +1,5 @@
-use imap::client::Client;
 use imap::error::Result;
 use std::vec::Vec;
-use std::io::{Read,Write};
 
 pub trait Folder {
     fn list_folders(&mut self, dir: &str, filter_sub_folders: &str) -> Result<Vec<String>>;

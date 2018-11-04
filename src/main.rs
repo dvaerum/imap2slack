@@ -24,6 +24,7 @@ use imap_extention::path::{Path, PathFrom};
 
 mod config;
 use config::DEFAULT;
+use config::FILTER;
 
 mod slack;
 use slack::post_mails;
@@ -43,7 +44,7 @@ fn main() {
 
     loop {
         let ssl_connector = TlsConnector::builder().build().unwrap();
-        let mut imap_socket: client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
+        let imap_socket: client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
         match client::secure_connect(socket_addr, domain, &ssl_connector) {
             Ok(mut sock) => {
                 sock.debug = DEFAULT.debug_imap();
@@ -87,8 +88,8 @@ fn main() {
                         ::std::process::exit(1);
                     },
                     // Error validating input data
-                    Error::Validate(ValidateError) => {
-                        println!("{:?}", ValidateError);
+                    Error::Validate(validate_error) => {
+                        println!("{:?}", validate_error);
                         ::std::process::exit(1);
                     }
                     // Error appending a mail
@@ -109,7 +110,7 @@ fn main() {
             println!("--- mailbox - {} ---", &path.as_str());
             match session.select_from(&path) {
 //                Ok(mailbox) => println!("Selected mailbox - '{}'", mailbox),
-                Ok(mailbox) => (),
+                Ok(_) => (),
                 Err(e) => println!("Error selecting INBOX: {}", e),
             };
 
@@ -131,13 +132,13 @@ fn main() {
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {
-                        match &publish.filter() {
-                            &Some(filter) => {
-                                if filter.check(&mail.subject) {
+                        match publish.filter() {
+                            Some(filter) => {
+                                if FILTER.check(&mail, filter) {
                                     post_mails(mail, &publish.channel);
                                 }
                             },
-                            &None => {
+                            None => {
                                 post_mails(mail, &publish.channel);
                             }
                         }

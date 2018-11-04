@@ -1,9 +1,6 @@
-use imap::client::Client;
 use imap::error::Result;
-use regex::Regex;
 use std::vec::Vec;
 use std::string::String;
-use std::str::FromStr;
 use std::io::{Read,Write};
 use super::mailparse::{self, ParsedContentType, ParsedMail};
 use std::collections::HashMap;
@@ -96,8 +93,6 @@ impl<T: Read + Write> Folder for Session<T> {
                     let mut date = String::new();
                     let mut text: String = String::new();
 
-
-                    let mut counter: usize = 0;
 
 //                    println!("====================================================");
 //                    println!("test_2: {:?}", &response);

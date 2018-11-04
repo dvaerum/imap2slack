@@ -1,4 +1,3 @@
-use imap::client::Client;
 use imap::error::Result;
 use regex::Regex;
 use std::vec::Vec;
