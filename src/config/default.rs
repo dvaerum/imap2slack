@@ -11,21 +11,39 @@ lazy_static! {
 }
 
 fn read_config(config_file: &str, config: Config) -> Config {
+    use std::io::Read;
+
     let mut config_file = init(config_file, config);
 
     let mut data = String::new();
     config_file.read_to_string(&mut data);
-    toml::from_str(&data).unwrap()
+    error_handler(toml::from_str(&data))
 }
 
 #[derive(Deserialize,Serialize,Clone,Debug)]
 pub struct Config {
     pub service: bool,
     pub sleep_time: u64,
-    pub mark_mail_as_read: Option<bool>,
+    mark_mail_as_seen: Option<bool>, // Should be true by default
+    debug: Option<bool>, // Should be false default
+    debug_imap: Option<bool>, // Should be false default
     pub mail: Mail,
     pub slack: Slack,
     pub publish: Vec<Publish>,
+}
+
+impl Config {
+    pub fn mark_mail_as_seen(&self) -> bool {
+        self.mark_mail_as_seen.unwrap_or(true)
+    }
+
+    pub fn debug(&self) -> bool {
+        self.debug.unwrap_or(false)
+    }
+
+    pub fn debug_imap(&self) -> bool {
+        self.debug_imap.unwrap_or(false)
+    }
 }
 
 #[derive(Deserialize,Serialize,Clone,Debug)]
@@ -59,7 +77,7 @@ impl Publish {
                     None => {
                         let mut config = FILTER.clone();
                         config.filter.insert(f.to_string(), filter::Filter {
-                            case_sensative: false,
+                            case_sensitive: false,
                             contains: Some(vec!["".to_string()]),
                             does_not_contains: Some(vec!["".to_string()]),
                         });
@@ -92,7 +110,9 @@ fn config_template() -> Config {
     Config {
         service: true,
         sleep_time: 5,
-        mark_mail_as_read: Some(true),
+        mark_mail_as_seen: Some(true),
+        debug: Some(false),
+        debug_imap: Some(false),
         mail: Mail {
             imap: "imap.domain.com".to_string(),
             port: 993,
@@ -113,6 +133,6 @@ fn config_template() -> Config {
                 mailbox: "Archive".to_string(),
                 channel: vec!["#general".to_string()],
                 filter: Some("Filter_1".to_string()),
-            }]
+            }],
     }
 }

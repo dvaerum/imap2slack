@@ -2,4 +2,4 @@
 **/*.rs.bk
 imap2slack.iml
 .idea/
-Cargo.lock
+/Cargo.lock

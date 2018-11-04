@@ -5,12 +5,14 @@ use std::vec::Vec;
 use std::string::String;
 use std::str::FromStr;
 use std::io::{Read,Write};
-use quoted_printable::{decode, ParseMode};
-use super::mailparse;
+use super::mailparse::{self, ParsedContentType, ParsedMail};
+use std::collections::HashMap;
+use config::DEFAULT;
+use imap::client::Session;
 
 #[derive(Debug)]
 pub struct Mail {
-    pub uid: usize,
+    pub uid: u32,
     pub flags: String,
     pub from: String,
     pub to: String,
@@ -22,81 +24,128 @@ pub struct Mail {
     pub text: String,
 }
 
+struct MailBodyPart {
+    headers: HashMap<String, String>,
+    ctype: ParsedContentType,
+    body: String,
+}
+
+fn find_mail_body_parts(mbp: &mut Vec<MailBodyPart>, mail_body: ParsedMail) {
+    let ctype = mail_body.ctype.mimetype.to_lowercase();
+
+    if ctype.contains("multipart/") {
+        for subpart in mail_body.subparts {
+            find_mail_body_parts(mbp, subpart);
+        }
+    } else if ctype.contains("text/plain") {
+        let mut headers = HashMap::new();
+        for header in &mail_body.headers {
+            headers.insert(header.get_key().unwrap(), header.get_value().unwrap());
+        }
+
+        mbp.push(MailBodyPart{
+            headers: headers,
+            body: mail_body.get_body().unwrap(),
+            ctype: mail_body.ctype,
+        });
+    }
+}
+
 #[allow(dead_code)]
 impl Mail {
-    fn print(&self) {
+    pub fn print(&self) {
         println!("uid: {}\nflags: {}\nfrom: {}\nto: {}\ncc: {}\nbcc: {}\nreply_to: {}\nsubject: {}\ndate: {}\ntext: {}\n",
                  self.uid, self.flags, self.from, self.to, self.cc, self.bcc, self.reply_to, self.subject, self.date, self.text);
     }
 
-    fn print_debug(&self) {
+    pub fn print_debug(&self) {
         println!("uid: {:?}\nflags: {:?}\nfrom: {:?}\nto: {:?}\ncc: {:?}\nbcc: {:?}\nreply_to: {:?}\nsubject: {:?}\ndate: {:?}\ntext: {:?}\n",
                  self.uid, self.flags, self.from, self.to, self.cc, self.bcc, self.reply_to, self.subject, self.date, self.text);
     }
 }
 
 pub trait Folder {
-    fn fetch_ext(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>>;
+    fn fetch_mail(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>>;
 }
 
-impl<T: Read + Write> Folder for Client<T> {
-    fn fetch_ext(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>> {
+impl<T: Read + Write> Folder for Session<T> {
+    fn fetch_mail(&mut self, sequence_set: &Vec<usize>) -> Result<Vec<Mail>> {
         let mut r: Vec<Mail> = Vec::new();
 
         for sequence in sequence_set {
 
-            match self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])") {
-                Ok(responses) => {
-                    let responses: String = responses.iter().map(|s| s.to_string()).collect();
+//            let fetch = self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])");
+            let fetch = self.fetch(&sequence.to_string(), "(FLAGS BODY.PEEK[])");
+//            println!("test_1: {:?}", fetch);
+            match fetch {
+                Ok(mut responses) => {
+                    if (*responses).len() > 1 {
+                        println!("WARNING response size is bigger then 1 and you need it find a way to deal with it");
+                    }
 
-                    let uid_and_flags = Regex::new(r#"[*][ ]+(?P<uid>\d+)[ ]+FETCH[ ]+\(FLAGS \((?P<flags>[^)]+)\)[ ]+(?s)(?P<next>.+)"#).unwrap().captures(&responses)
-                        .expect("Something is wrong with the passing (regex) of the data from the fetch mail");
-                    let uid = usize::from_str(&uid_and_flags["uid"]).unwrap();
-                    let flags: String = String::from(&uid_and_flags["flags"]);
+                    let response = &(*responses)[0];
 
-    //                let header_fields = Regex::new(r#"BODY\[[^]]+[ ]+\{(?P<size>\d+)\}[^\n]+(?P<next>.+)"#).unwrap().captures(&uid_and_flags["next"])
-                    let header_fields = Regex::new(r#"BODY\[[^\]]+\][ ]+\{(?P<size>\d+)\}[^\n]+\n(?s)(?P<next>.+)"#).unwrap().captures(&uid_and_flags["next"])
-                        .expect("Something is wrong with the passing (regex) of the data from the fetch mail");
-                    let header_fields_size = usize::from_str(&header_fields["size"]).unwrap();
-                    let header_fields_split = header_fields["next"].split_at(header_fields_size);
+                    let mut uid = response.message;
+                    let mut flags = String::new();
+                    let mut from = String::new();
+                    let mut to = String::new();
+                    let mut cc = String::new();
+                    let mut bcc = String::new();
+                    let mut reply_to = String::new();
+                    let mut subject = String::new();
+                    let mut date = String::new();
+                    let mut text: String = String::new();
 
-                    let from =     Regex::new(r"(?i)(^F|\nF)rom: (?P<from>.+?)\r?\n").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
-                    let to =       Regex::new(r"(?i)(^T|\nT)o: (?P<to>.+?)\r?\n").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
-                    let cc =       Regex::new(r"(?i)(^C|\nC)c: (?P<cc>.+?)\r?\n").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
-                    let bcc =      Regex::new(r"(?i)(^B|\nB)cc: (?P<bcc>.+?)\r?\n").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
-                    let reply_to = Regex::new(r"(?i)(^R|\nR)eply-To: (?P<reply_to>.+?)\r?\n").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
 
-//                    let mut subject =  Regex::new(r"(?i)(^S|\nS)ubject:(?s) (?P<subject>(\r?\n\t?\s|.)+?)(\r?\n\w)").unwrap().captures(header_fields_split.0)
-//                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().replace("\r\n ", " ").to_string());;
-                    let mut subject =  Regex::new(r"(?i)(^S|\nS)ubject:(?s) (?P<subject>(\r?\n\t?\s|.)+?)(\r?\n\w)").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());;
-//                    println!("{:?}", subject);
-//                    let subject = format!("subject: {}", subject);
-                    let (subject_tmp, _) = mailparse::parse_headers(header_fields_split.0.as_bytes()).unwrap();
-//                    let subject = subject_tmp.get_value().unwrap();
-                    for mailheader in &subject_tmp {
-//                        println!("HEADER -> {}: {}", mailheader.get_key().unwrap(), mailheader.get_value().unwrap());
-                        if mailheader.get_key().unwrap().to_lowercase() ==  "subject" {
-                            subject = mailheader.get_value().unwrap();
+                    let mut counter: usize = 0;
+
+//                    println!("====================================================");
+//                    println!("test_2: {:?}", &response);
+//                    println!("====================================================");
+//                    println!("====================================================");
+//                    println!("test_2: {}", String::from_utf8_lossy((*responses)[0].body().unwrap()));
+//                    println!("====================================================");
+
+                    let mut mail_buffer: Vec<u8> = response.body().unwrap().to_vec();
+
+                    let mail = mailparse::parse_mail(&mail_buffer).unwrap();
+
+                    for header in &mail.headers {
+//                        println!("HEADER -> {}: {}", header.get_key().unwrap(), header.get_value().unwrap());
+                        //                        if mailheader.get_key().unwrap().to_lowercase() ==  "subject" {
+                        //                            subject = mailheader.get_value().unwrap();
+                        //                        }
+
+                        match header.get_key().unwrap().to_lowercase().as_ref() {
+                            "from" => from = header.get_value().unwrap(),
+                            "to" => to = header.get_value().unwrap(),
+                            "cc" => cc = header.get_value().unwrap(),
+                            "bcc" => bcc = header.get_value().unwrap(),
+                            "reply_to" => reply_to = header.get_value().unwrap(),
+                            "subject" => subject = header.get_value().unwrap(),
+                            "date" => date = header.get_value().unwrap(),
+                            _ => (),
                         }
                     }
-//                    println!("{:?}", subject);
 
+                    let mut mail_body_parts: Vec<MailBodyPart> = Vec::new();
+                    find_mail_body_parts(&mut mail_body_parts, mail);
 
-                    let date =     Regex::new(r"(?i)(^D|\nD)ate: (?P<date>.+?)(\r?\n)").unwrap().captures(header_fields_split.0)
-                        .map_or(String::new(), |s| s.get(2).unwrap().as_str().to_string());
+                    if DEFAULT.debug() {
+                        for i in 0..mail_body_parts.len() {
+                            println!("---===( subpart {} )===---", i);
+                            println!("headers: {:?}", &mail_body_parts[i].headers);
+                            println!("ctype: {:?}", &mail_body_parts[i].ctype);
+                            println!("body.len: {}", &mail_body_parts[i].body.len());
+                            println!("");
+                        }
+                    }
 
-                    let text_fields = Regex::new(r#"BODY\[TEXT\][ ]+\{(?P<size>\d+)\}[^\n]+\n(?s)(?P<next>.+)"#).unwrap().captures(&header_fields_split.1)
-                        .expect("Something is wrong with the passing (regex) of the data from the fetch mail");
-                    let text_fields_size = usize::from_str(&text_fields["size"]).unwrap();
-                    let text_fields_split = text_fields["next"].split_at(text_fields_size);
-
-                    let text = String::from_utf8(decode(text_fields_split.0.replace("=\r\n", ""), ParseMode::Robust).unwrap()).unwrap();
+                    for mail_body_part in mail_body_parts {
+                        if mail_body_part.ctype.mimetype.contains("text/plain") {
+                            text = mail_body_part.body;
+                        }
+                    }
 
                     r.push(Mail {
                         uid: uid,

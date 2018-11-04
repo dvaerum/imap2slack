@@ -1,13 +1,6 @@
 use super::*;
 
-use std::env::home_dir;
-use std::fs::{create_dir_all,File};
-use std::path::Path;
-
-use serde_derive;
-use lazy_static;
-
-use toml::value::{Array, Table};
+use std::fs::{File};
 
 use std::collections::BTreeMap;
 
@@ -20,11 +13,13 @@ lazy_static! {
 }
 
 fn read_config(config_file: &str, config: Config) -> Config {
+    use std::io::Read;
+
     let mut config_file = init(config_file, config);
 
     let mut data = String::new();
     config_file.read_to_string(&mut data);
-    toml::from_str(&data).unwrap()
+    error_handler(toml::from_str(&data))
 }
 
 #[derive(Deserialize,Serialize,Clone,Debug)]
@@ -34,7 +29,7 @@ pub struct Config {
 
 #[derive(Deserialize,Serialize,Clone,Debug)]
 pub struct Filter {
-    pub case_sensative: bool,
+    pub case_sensitive: bool,
     pub contains: Option<Vec<String>>,
     pub does_not_contains: Option<Vec<String>>,
 }
@@ -60,7 +55,7 @@ impl Filter {
         match self.contains {
             Some(ref filters) => {
                 for filter in filters {
-                    if self.case_sensative {
+                    if self.case_sensitive {
                         r_contains = text.contains(filter.as_str()) && r_contains;
                     } else {
                         r_contains = text.to_lowercase().as_str().contains(filter.to_lowercase().as_str()) && r_contains;
@@ -73,7 +68,7 @@ impl Filter {
         match self.does_not_contains {
             Some(ref filters) => {
                 for filter in filters {
-                    if self.case_sensative {
+                    if self.case_sensitive {
                         r_does_not_contains = !text.as_str().contains(filter.as_str()) && r_does_not_contains;
                     } else {
                         r_does_not_contains = !text.to_lowercase().as_str().contains(filter.to_lowercase().as_str()) && r_does_not_contains;
@@ -95,7 +90,7 @@ fn config_template() -> Config {
     Config {
         filter: { let mut t = BTreeMap::new();
             t.insert("Filter_1".to_string(),Filter {
-                case_sensative: false,
+                case_sensitive: false,
                 contains: Some(vec!["[Something]".to_string()]),
                 does_not_contains: Some(vec!["TEST".to_string(), "REMINDER".to_string()]),
             });
