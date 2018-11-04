@@ -4,7 +4,8 @@ version = "0.1.4"
 authors = ["nn <nn@nn.nn>"]
 
 [dependencies]
-#imap = "*"
+log = "*"
+simple_logger = "*"
 imap = { git = "https://github.com/mattnenterprise/rust-imap.git", rev = "510dab9" }
 native-tls = "*"
 mailparse = "*"

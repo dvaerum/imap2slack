@@ -31,7 +31,7 @@ pub struct Config {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-struct Filter {
+pub struct Filter {
     pub subject_case_sensitive: bool,
     pub subject_contains: Option<Vec<String>>,
     pub subject_not_contains: Option<Vec<String>>,
@@ -57,6 +57,16 @@ impl Config {
         match self.filter.get(filter) {
             Some(f) => return f.check(mail, &filter),
             None => {
+                error!("The filter '{}' was missing, but a empty filter has been add. However you still need to", filter);
+                ::std::process::exit(1);
+            }
+        }
+    }
+
+    pub fn check_exist(&self, filter: &String) -> Option<&Filter> {
+        match self.filter.get(filter) {
+            Some(ref f) => Some(f),
+            None => {
                 let mut config = FILTER.clone();
                 config.filter.insert(filter.to_string(), filter::Filter {
                     subject_case_sensitive: false,
@@ -66,9 +76,9 @@ impl Config {
                     message_not_regex: Some(vec!["".to_string()]),
                 });
 
-                println!("The filter '{}' was missing, but a empty filter has been add. However you still need to", filter);
+                error!("The filter '{}' was missing, but a empty filter has been add. However you still need to", filter);
                 config.write();
-                ::std::process::exit(1);
+                None
             }
         }
     }

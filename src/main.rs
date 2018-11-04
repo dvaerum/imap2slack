@@ -8,6 +8,9 @@ extern crate lazy_static;
 extern crate toml;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate log;
+extern crate simple_logger;
 
 
 use std::thread::sleep;
@@ -33,8 +36,12 @@ use slack::post_mails;
 // See: https://support.google.com/accounts/answer/6010255?hl=en
 // Look at the gmail_oauth2.rs example on how to connect to a gmail server securely.
 fn main() {
+    simple_logger::init_with_level(log::Level::Info).unwrap();
+
     for publish in &DEFAULT.publish {
-        &publish.filter();
+        if !&publish.filter_exist() {
+            ::std::process::exit(1);
+        }
     }
 
 
@@ -54,47 +61,47 @@ fn main() {
                 match e {
                     // An `io::Error` that occurred while trying to read or write to a network stream.
                     Error::Io(io_error) => {
-                        println!("{:?}", io_error);
+                        error!("{:?}", io_error);
                         ::std::process::exit(1);
                     },
                     // An error from the `native_tls` library during the TLS handshake.
                     Error::TlsHandshake(tls_handshake_error) => {
-                        println!("{:?}", tls_handshake_error);
+                        error!("{:?}", tls_handshake_error);
                         ::std::process::exit(1);
                     },
                     // An error from the `native_tls` library while managing the socket.
                     Error::Tls(tls_error) => {
-                        println!("{:?}", tls_error);
+                        error!("{:?}", tls_error);
                         ::std::process::exit(1);
                     },
                     // A BAD response from the IMAP server.
                     Error::BadResponse(response) => {
-                        println!("{:?}", response);
+                        error!("{:?}", response);
                         ::std::process::exit(1);
                     },
                     // A NO response from the IMAP server.
                     Error::NoResponse(response) => {
-                        println!("{:?}", response);
+                        error!("{:?}", response);
                         ::std::process::exit(1);
                     },
                     // The connection was terminated unexpectedly.
                     Error::ConnectionLost => {
-                        println!("Connection to the server has been lost");
+                        error!("Connection to the server has been lost");
                         ::std::process::exit(1);
                     },
                     // Error parsing a server response.
                     Error::Parse(parse_error) => {
-                        println!("{:?}", parse_error);
+                        error!("{:?}", parse_error);
                         ::std::process::exit(1);
                     },
                     // Error validating input data
                     Error::Validate(validate_error) => {
-                        println!("{:?}", validate_error);
+                        error!("{:?}", validate_error);
                         ::std::process::exit(1);
                     }
                     // Error appending a mail
                     Error::Append => {
-                        println!("Error appending a mail");
+                        error!("Error appending a mail");
                         ::std::process::exit(1);
                     },
                 }
@@ -107,11 +114,11 @@ fn main() {
             let path = Path::new(&publish.mailbox);
             let mut uids: Vec<usize> = Vec::new();
 
-            println!("--- mailbox - {} ---", &path.as_str());
+            info!("--- mailbox - {} ---", &path.as_str());
             match session.select_from(&path) {
-//                Ok(mailbox) => println!("Selected mailbox - '{}'", mailbox),
+                Ok(mailbox) => debug!("Selected mailbox - '{}'", mailbox),
                 Ok(_) => (),
-                Err(e) => println!("Error selecting INBOX: {}", e),
+                Err(e) => error!("Error selecting INBOX: {}", e),
             };
 
             match session.search2(vec![SEARCH::UNSEEN]) {

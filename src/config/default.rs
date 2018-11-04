@@ -70,6 +70,13 @@ impl Publish {
     pub fn filter(&self) -> Option<&String> {
         self.filter.as_ref()
     }
+    pub fn filter_exist(&self) -> bool {
+        match self.filter.as_ref() {
+            Some(filter) => FILTER.check_exist(filter).is_some(),
+            None => true,
+        }
+
+    }
 }
 
 impl WriteConfig for Config {
