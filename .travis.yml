@@ -2,5 +2,9 @@ language: rust
 
 cache: cargo
 
+before_script:
+  - sed -i 's:^imap[ ={]*git[ ="]*\([^"]*\)[", ]*.*[}]*:imap = { git = "\1" }:' "Cargo.toml"
+  - cargo update
+
 script:
   - cargo build --verbose --all
