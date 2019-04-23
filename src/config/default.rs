@@ -1,6 +1,10 @@
 use super::*;
+use chrono::Utc;
+use std::str::FromStr;
+use std::fs;
 
 static CONFIG_FILE: &'static str = "default.toml";
+static TIMESTAMP_FILE: &'static str = "timestamp.txt";
 
 lazy_static! {
     pub static ref CONFIG: Config = {
@@ -18,13 +22,14 @@ fn read_config(config_file: &str, config: Config) -> Config {
     error_handler(toml::from_str(&data))
 }
 
-#[derive(Deserialize,Serialize,Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Config {
     pub service: bool,
     pub sleep_time: u64,
     mark_mail_as_seen: Option<bool>, // Should be true by default
-    debug: Option<bool>, // Should be false default
-    debug_imap: Option<bool>, // Should be false default
+    debug: Option<bool>, // Should be false by default
+    debug_imap: Option<bool>, // Should be false by default
+    use_timestamp: Option<bool>, // Should be false by default
     pub mail: Mail,
     pub slack: Slack,
     pub publish: Vec<Publish>,
@@ -42,9 +47,36 @@ impl Config {
     pub fn debug_imap(&self) -> bool {
         self.debug_imap.unwrap_or(false)
     }
+
+    pub fn use_timestamp(&self) -> bool {
+        self.use_timestamp.unwrap_or(false)
+    }
+
+    pub fn get_timestamp(&self) -> i64 {
+        let mut ts_file = path_config_dir();
+        ts_file.push(TIMESTAMP_FILE);
+        let ts_file = ts_file.as_path();
+
+        if ts_file.exists() {
+            println!("Open timestamp file - {}", format!("{}", Utc::now().timestamp()));
+            let ts_str = fs::read_to_string(ts_file).
+                expect(format!("Something went wrong with open the file '{}'", ts_file.to_str().unwrap()).as_ref()).
+                trim().to_owned();
+            let timestamp = i64::from_str(ts_str.as_str()).unwrap_or(Utc::now().timestamp());
+            fs::write(ts_file, format!("{}", Utc::now().timestamp()).as_bytes()).
+                expect(format!("Something went wrong with writing the file '{}'", ts_file.to_str().unwrap()).as_ref());
+            return timestamp;
+        } else {
+            println!("Create timestamp file");
+            let timestamp = Utc::now().timestamp();
+            fs::write(ts_file, format!("{}", Utc::now().timestamp()).as_bytes()).
+                expect(format!("Something went wrong with writing the file '{}'", ts_file.to_str().unwrap()).as_ref());
+            return timestamp;
+        }
+    }
 }
 
-#[derive(Deserialize,Serialize,Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Mail {
     pub imap: String,
     pub port: u16,
@@ -52,14 +84,14 @@ pub struct Mail {
     pub password: String,
 }
 
-#[derive(Deserialize,Serialize,Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Slack {
     pub webhook: String,
     pub username: String,
     pub emoji: String,
 }
 
-#[derive(Deserialize,Serialize,Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Publish {
     pub mailbox: String,
     pub channel: Vec<String>,
@@ -75,7 +107,6 @@ impl Publish {
             Some(filter) => FILTER.check_exist(filter).is_some(),
             None => true,
         }
-
     }
 }
 
@@ -99,6 +130,7 @@ fn config_template() -> Config {
         mark_mail_as_seen: Some(true),
         debug: Some(false),
         debug_imap: Some(false),
+        use_timestamp: Some(false),
         mail: Mail {
             imap: "imap.domain.com".to_string(),
             port: 993,

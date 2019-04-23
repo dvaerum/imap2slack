@@ -4,12 +4,14 @@ use std::vec::Vec;
 use std::string::String;
 use std::io::{Read,Write};
 use std::str::FromStr;
-use imap::client::Session;
+use imap::Session;
+use chrono::{DateTime, Utc};
 
 #[allow(dead_code)]
 pub enum SEARCH {
     SEEN,
     UNSEEN,
+    SINCE(DateTime<Utc>),
 }
 
 pub trait Search {
@@ -19,6 +21,7 @@ pub trait Search {
 impl<T: Read + Write> Search for Session<T> {
     fn search2(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>> {
         let criteria: String = filter.iter().map(|s| format!("{} ", search2str(s))).collect();
+        println!("IMAP - Search command: 'SEARCH {}'", criteria.trim());
         let search_result = self.run_command_and_read_response(&format!("SEARCH {}", criteria.trim()));
         println!("Search; {:?}", &search_result);
         match search_result {
@@ -43,6 +46,10 @@ impl<T: Read + Write> Search for Session<T> {
 fn search2str<'a>(s: &SEARCH) -> &'a str{
     match s {
         &SEARCH::SEEN => "SEEN",
-        &SEARCH::UNSEEN => "UNSEEN"
+        &SEARCH::UNSEEN => "UNSEEN",
+        &SEARCH::SINCE(dt) => {
+            let s = format!(r##"SINCE "{}""##, dt.format("%d-%b-%Y").to_string());
+            Box::leak(s.into_boxed_str())
+        },
     }
 }

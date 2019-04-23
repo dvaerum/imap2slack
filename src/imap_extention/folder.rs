@@ -1,11 +1,11 @@
-use imap::error::Result;
-use std::vec::Vec;
+//use imap::error::Result;
+//use std::vec::Vec;
 
-pub trait Folder {
-    fn list_folders(&mut self, dir: &str, filter_sub_folders: &str) -> Result<Vec<String>>;
-    fn list_root_folders(&mut self) -> Result<Vec<String>>;
-    fn list_sub_folders(&mut self, dir: &str, ) -> Result<Vec<String>>;
-}
+//pub trait Folder {
+//    fn list_folders(&mut self, dir: &str, filter_sub_folders: &str) -> Result<Vec<String>>;
+//    fn list_root_folders(&mut self) -> Result<Vec<String>>;
+//    fn list_sub_folders(&mut self, dir: &str, ) -> Result<Vec<String>>;
+//}
 
 //impl<T: Read + Write> Folder for Client<T> {
 //    fn list_folders(&mut self, dir: &str, filter_sub_folders: &str) -> Result<Vec<String>> {

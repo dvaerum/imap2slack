@@ -1,8 +1,8 @@
 use std::string::String;
 use imap::error::Result;
 use std::io::{Read,Write};
-use imap::Mailbox;
-use imap::client::Session;
+use imap::types::Mailbox;
+use imap::Session;
 
 #[allow(dead_code)]#[derive(Debug)]
 pub struct Status {

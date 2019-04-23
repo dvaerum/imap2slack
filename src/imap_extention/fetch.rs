@@ -5,7 +5,7 @@ use std::io::{Read,Write};
 use super::mailparse::{self, ParsedContentType, ParsedMail};
 use std::collections::HashMap;
 use config::DEFAULT;
-use imap::client::Session;
+use imap::Session;
 
 #[derive(Debug)]
 pub struct Mail {

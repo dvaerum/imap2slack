@@ -32,7 +32,7 @@ pub struct Config {
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Filter {
-    pub subject_case_sensitive: bool,
+    subject_case_sensitive: Option<bool>,
     pub subject_contains: Option<Vec<String>>,
     pub subject_not_contains: Option<Vec<String>>,
     pub message_regex: Option<Vec<String>>,
@@ -69,7 +69,7 @@ impl Config {
             None => {
                 let mut config = FILTER.clone();
                 config.filter.insert(filter.to_string(), filter::Filter {
-                    subject_case_sensitive: false,
+                    subject_case_sensitive: Some(false),
                     subject_contains: Some(vec!["".to_string()]),
                     subject_not_contains: Some(vec!["".to_string()]),
                     message_regex: Some(vec!["".to_string()]),
@@ -92,7 +92,7 @@ impl Filter {
         match self.subject_contains {
             Some(ref filters) => {
                 for filter in filters {
-                    if self.subject_case_sensitive {
+                    if self.subject_case_sensitive() {
                         subject_contains = mail.subject.contains(filter) && subject_contains;
                     } else {
                         subject_contains = mail.subject.to_lowercase().contains(filter.to_lowercase().as_str()) && subject_contains;
@@ -105,7 +105,7 @@ impl Filter {
         match self.subject_not_contains {
             Some(ref filters) => {
                 for filter in filters {
-                    if self.subject_case_sensitive {
+                    if self.subject_case_sensitive() {
                         subject_not_contains = !mail.subject.contains(filter) && subject_not_contains;
                     } else {
                         subject_not_contains = !mail.subject.to_lowercase().contains(filter.to_lowercase().as_str()) && subject_not_contains;
@@ -119,6 +119,10 @@ impl Filter {
         return subject_contains && subject_not_contains &&
             self.message_regex(&mail.text, filter_name) &&
             self.message_not_regex(&mail.text, filter_name);
+    }
+
+    fn subject_case_sensitive(&self) -> bool {
+        self.subject_case_sensitive.unwrap_or(false)
     }
 
     fn message_regex(&self, message: &String, filter: &String) -> bool {
@@ -163,7 +167,7 @@ fn config_template() -> Config {
         filter: {
             let mut t = BTreeMap::new();
             t.insert("Filter_1".to_string(), Filter {
-                subject_case_sensitive: false,
+                subject_case_sensitive: Some(false),
                 subject_contains: Some(vec!["[Something]".to_string()]),
                 subject_not_contains: Some(vec!["TEST".to_string(), "REMINDER".to_string()]),
                 message_regex: Some(vec!["WRITE A REGULAR EXPRESSION".to_owned()]),

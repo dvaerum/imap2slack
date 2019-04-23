@@ -11,31 +11,42 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 extern crate simple_logger;
+extern crate chrono;
+extern crate core;
 
 
 use std::thread::sleep;
 use std::time::Duration;
 
 use native_tls::TlsConnector;
-use imap::client;
+use imap::Client;
 use imap::error::Error;
 
 mod imap_extention;
+
 use imap_extention::search::*;
 use imap_extention::fetch::*;
 use imap_extention::path::{Path, PathFrom};
 
 mod config;
+
 use config::DEFAULT;
 use config::FILTER;
 
 mod slack;
+
 use slack::post_mails;
+use chrono::{DateTime, Utc, NaiveDateTime};
+
+use regex::Regex;
+
 
 // To connect to the gmail IMAP server with this you will need to allow unsecure apps access.
 // See: https://support.google.com/accounts/answer/6010255?hl=en
 // Look at the gmail_oauth2.rs example on how to connect to a gmail server securely.
 fn main() {
+    let re_timezone_name: Regex = Regex::new(r"\([A-Za-z0-9]+\)").unwrap();
+
     simple_logger::init_with_level(log::Level::Info).unwrap();
 
     for publish in &DEFAULT.publish {
@@ -44,56 +55,56 @@ fn main() {
         }
     }
 
-
     let domain: &str = &DEFAULT.mail.imap;
     let port: u16 = DEFAULT.mail.port.clone();
     let socket_addr = (domain, port);
 
+    let tls = TlsConnector::builder().build().unwrap();
+
     loop {
-        let ssl_connector = TlsConnector::builder().build().unwrap();
-        let imap_socket: client::Client<native_tls::TlsStream<std::net::TcpStream>>; // = Client::secure_connect(socket_addr, domain, ssl_connector).unwrap();
-        match client::secure_connect(socket_addr, domain, &ssl_connector) {
-            Ok(mut sock) => {
-                sock.debug = DEFAULT.debug_imap();
-                imap_socket = sock
-            },
+        let client: Client<native_tls::TlsStream<std::net::TcpStream>>;
+        match imap::connect(socket_addr, domain, &tls) {
+            Ok(mut _client) => {
+                _client.debug = DEFAULT.debug_imap();
+                client = _client
+            }
             Err(e) => {
                 match e {
                     // An `io::Error` that occurred while trying to read or write to a network stream.
                     Error::Io(io_error) => {
                         error!("{:?}", io_error);
                         ::std::process::exit(1);
-                    },
+                    }
                     // An error from the `native_tls` library during the TLS handshake.
                     Error::TlsHandshake(tls_handshake_error) => {
                         error!("{:?}", tls_handshake_error);
                         ::std::process::exit(1);
-                    },
+                    }
                     // An error from the `native_tls` library while managing the socket.
                     Error::Tls(tls_error) => {
                         error!("{:?}", tls_error);
                         ::std::process::exit(1);
-                    },
+                    }
                     // A BAD response from the IMAP server.
-                    Error::BadResponse(response) => {
+                    Error::Bad(response) => {
                         error!("{:?}", response);
                         ::std::process::exit(1);
-                    },
+                    }
                     // A NO response from the IMAP server.
-                    Error::NoResponse(response) => {
+                    Error::No(response) => {
                         error!("{:?}", response);
                         ::std::process::exit(1);
-                    },
+                    }
                     // The connection was terminated unexpectedly.
                     Error::ConnectionLost => {
                         error!("Connection to the server has been lost");
                         ::std::process::exit(1);
-                    },
+                    }
                     // Error parsing a server response.
                     Error::Parse(parse_error) => {
                         error!("{:?}", parse_error);
                         ::std::process::exit(1);
-                    },
+                    }
                     // Error validating input data
                     Error::Validate(validate_error) => {
                         error!("{:?}", validate_error);
@@ -103,12 +114,12 @@ fn main() {
                     Error::Append => {
                         error!("Error appending a mail");
                         ::std::process::exit(1);
-                    },
+                    }
                 }
             }
         };
 
-        let mut session = imap_socket.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
+        let mut session = client.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
 
         for publish in &DEFAULT.publish {
             let path = Path::new(&publish.mailbox);
@@ -117,11 +128,19 @@ fn main() {
             info!("--- mailbox - {} ---", &path.as_str());
             match session.select_from(&path) {
                 Ok(mailbox) => debug!("Selected mailbox - '{}'", mailbox),
-                Ok(_) => (),
                 Err(e) => error!("Error selecting INBOX: {}", e),
             };
 
-            match session.search2(vec![SEARCH::UNSEEN]) {
+            let mut search_args: Vec<SEARCH>;
+            let mut timestamp: i64 = 0;
+            if DEFAULT.use_timestamp() {
+                timestamp = DEFAULT.get_timestamp();
+                search_args = vec![SEARCH::SINCE(DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc))];
+            } else {
+                search_args = vec![SEARCH::UNSEEN];
+            }
+
+            match session.search2(search_args) {
                 Ok(u) => {
                     if DEFAULT.debug() {
                         println!("---===( Search )===---\n{:?}", &u);
@@ -139,12 +158,21 @@ fn main() {
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {
+                        if DEFAULT.use_timestamp() {
+                            let mut date = re_timezone_name.replace_all(&mail.date, "").to_string().trim().to_owned();
+
+                            let nn = NaiveDateTime::parse_from_str(&date, "%a, %d %b %Y %H:%M:%S %z").
+                                expect("There is a format in the Date header of the email there is not handled correct");
+                            if nn.timestamp() < timestamp {
+                                continue;
+                            }
+                        }
                         match publish.filter() {
                             Some(filter) => {
                                 if FILTER.check(&mail, filter) {
                                     post_mails(mail, &publish.channel);
                                 }
-                            },
+                            }
                             None => {
                                 post_mails(mail, &publish.channel);
                             }
@@ -155,7 +183,7 @@ fn main() {
                             session.store(&mail.uid.to_string(), r"+FLAGS \Seen");
                         }
                     }
-                },
+                }
                 Err(e) => println!("Failed to fetch: {}", e),
             }
         }

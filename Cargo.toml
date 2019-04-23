@@ -6,7 +6,7 @@ authors = ["nn <nn@nn.nn>"]
 [dependencies]
 log = "*"
 simple_logger = "*"
-imap = { git = "https://github.com/mattnenterprise/rust-imap.git", rev = "510dab9" }
+imap = '*'
 native-tls = "*"
 mailparse = "*"
 regex = "*"
@@ -17,3 +17,5 @@ toml = { git = "https://github.com/dvaerum/toml-rs.git" }
 serde = "*"
 serde_derive = "*"
 lazy_static = "*"
+dirs = "*"
+chrono = "*"

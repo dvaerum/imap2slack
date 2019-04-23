@@ -1,4 +1,5 @@
 extern crate serde;
+extern crate dirs;
 
 pub mod default;
 pub mod filter;
@@ -57,9 +58,7 @@ fn error_handler<T>(config: serde::export::Result<T, toml::de::Error>) -> T wher
 }
 
 fn path_config_dir() -> PathBuf {
-    use std::env::home_dir;
-
-    let mut path_config_dir = home_dir().unwrap();
+    let mut path_config_dir = dirs::home_dir().unwrap();
     path_config_dir.push(CONFIG_FOLDER);
     path_config_dir
 }
@@ -74,6 +73,7 @@ trait WriteConfig {
     fn write(&self);
 }
 
+#[allow(dead_code)]
 fn write_config<T>(filename: &str, config: &T) where T: Serialize {
     let path_config_file = path_config_file(filename);
 
