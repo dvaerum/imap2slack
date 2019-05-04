@@ -1,5 +1,5 @@
 use super::*;
-use chrono::Utc;
+use chrono::{Utc, NaiveDateTime, DateTime, FixedOffset, offset};
 use std::str::FromStr;
 use std::fs;
 
@@ -52,7 +52,7 @@ impl Config {
         self.use_timestamp.unwrap_or(false)
     }
 
-    pub fn get_timestamp(&self) -> i64 {
+    pub fn get_timestamp(&self) -> DateTime<Utc> {
         let mut ts_file = path_config_dir();
         ts_file.push(TIMESTAMP_FILE);
         let ts_file = ts_file.as_path();
@@ -65,11 +65,11 @@ impl Config {
             let timestamp = i64::from_str(ts_str.as_str()).unwrap_or(Utc::now().timestamp());
             fs::write(ts_file, format!("{}", Utc::now().timestamp()).as_bytes()).
                 expect(format!("Something went wrong with writing the file '{}'", ts_file.to_str().unwrap()).as_ref());
-            return timestamp;
+            return DateTime::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc);
         } else {
             println!("Create timestamp file");
-            let timestamp = Utc::now().timestamp();
-            fs::write(ts_file, format!("{}", Utc::now().timestamp()).as_bytes()).
+            let timestamp = Utc::now();
+            fs::write(ts_file, format!("{}", timestamp.timestamp()).as_bytes()).
                 expect(format!("Something went wrong with writing the file '{}'", ts_file.to_str().unwrap()).as_ref());
             return timestamp;
         }

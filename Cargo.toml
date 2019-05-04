@@ -1,6 +1,6 @@
 [package]
 name = "imap2slack"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["nn <nn@nn.nn>"]
 
 [dependencies]

@@ -16,7 +16,7 @@ extern crate core;
 
 
 use std::thread::sleep;
-use std::time::Duration;
+use std::time;
 
 use native_tls::TlsConnector;
 use imap::Client;
@@ -36,7 +36,7 @@ use config::FILTER;
 mod slack;
 
 use slack::post_mails;
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{DateTime, Utc, NaiveDateTime, FixedOffset, Duration};
 
 use regex::Regex;
 
@@ -121,6 +121,15 @@ fn main() {
 
         let mut session = client.login(&DEFAULT.mail.username, &DEFAULT.mail.password).unwrap();
 
+        let mut search_args: Vec<SEARCH>;
+        let mut timestamp: Option<DateTime<Utc>> = None;
+        if DEFAULT.use_timestamp() {
+            timestamp = Some(DEFAULT.get_timestamp());
+            search_args = vec![SEARCH::SINCE(timestamp.clone().unwrap())];
+        } else {
+            search_args = vec![SEARCH::UNSEEN];
+        }
+
         for publish in &DEFAULT.publish {
             let path = Path::new(&publish.mailbox);
             let mut uids: Vec<usize> = Vec::new();
@@ -131,16 +140,7 @@ fn main() {
                 Err(e) => error!("Error selecting INBOX: {}", e),
             };
 
-            let mut search_args: Vec<SEARCH>;
-            let mut timestamp: i64 = 0;
-            if DEFAULT.use_timestamp() {
-                timestamp = DEFAULT.get_timestamp();
-                search_args = vec![SEARCH::SINCE(DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc))];
-            } else {
-                search_args = vec![SEARCH::UNSEEN];
-            }
-
-            match session.search2(search_args) {
+            match session.search2(&search_args) {
                 Ok(u) => {
                     if DEFAULT.debug() {
                         println!("---===( Search )===---\n{:?}", &u);
@@ -158,12 +158,24 @@ fn main() {
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {
+                        if DEFAULT.debug() {
+                            println!("- {:?}", &mail);
+                        }
+
                         if DEFAULT.use_timestamp() {
+                            let datetime = timestamp.unwrap();
                             let mut date = re_timezone_name.replace_all(&mail.date, "").to_string().trim().to_owned();
 
-                            let nn = NaiveDateTime::parse_from_str(&date, "%a, %d %b %Y %H:%M:%S %z").
+                            let mail_ts_fixed = DateTime::parse_from_str(&date, "%a, %d %b %Y %H:%M:%S %z").
                                 expect("There is a format in the Date header of the email there is not handled correct");
-                            if nn.timestamp() < timestamp {
+                            let mail_ts_utc = mail_ts_fixed.clone().with_timezone(&Utc);
+
+
+                            if DEFAULT.debug() {
+                                println!("---===( Compare Timestamp )===---\nLocal: {} - Mail: {}\n{}\n", datetime, &mail_ts_utc,
+                                         if mail_ts_utc < datetime {"Local DT the biggest"} else {"Mail DT the biggest"});
+                            }
+                            if mail_ts_utc < datetime {
                                 continue;
                             }
                         }
@@ -191,7 +203,7 @@ fn main() {
         session.logout().unwrap();
 
         if DEFAULT.service {
-            sleep(Duration::new(DEFAULT.sleep_time * 60, 0));
+            sleep(time::Duration::new(DEFAULT.sleep_time * 60, 0));
         } else {
             break;
         }

@@ -5,7 +5,7 @@ use std::string::String;
 use std::io::{Read,Write};
 use std::str::FromStr;
 use imap::Session;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, FixedOffset};
 
 #[allow(dead_code)]
 pub enum SEARCH {
@@ -15,11 +15,11 @@ pub enum SEARCH {
 }
 
 pub trait Search {
-    fn search2(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>>;
+    fn search2(&mut self, filter: &Vec<SEARCH>) -> Result<Vec<usize>>;
 }
 
 impl<T: Read + Write> Search for Session<T> {
-    fn search2(&mut self, filter: Vec<SEARCH>) -> Result<Vec<usize>> {
+    fn search2(&mut self, filter: &Vec<SEARCH>) -> Result<Vec<usize>> {
         let criteria: String = filter.iter().map(|s| format!("{} ", search2str(s))).collect();
         println!("IMAP - Search command: 'SEARCH {}'", criteria.trim());
         let search_result = self.run_command_and_read_response(&format!("SEARCH {}", criteria.trim()));
