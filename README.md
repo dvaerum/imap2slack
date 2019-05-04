@@ -8,6 +8,7 @@ Edit the `default.toml` config file. Config the following information
 - `service` If `false` it only checks for mails ones. If `true` it continues to check for mails.
 - `sleep` number of minutes to wait before checking for new mail again.
 - `mark_mail_as_seen` If `false` the mails will not be marked as read. If `true` the mails will be marked as read.
+- `use_timestamp` If set to `true` the mails fetched will be decited by timestamp and not that they are marked as unread
 
 #### [mail]
 - `ìmap` The url for the imap server
