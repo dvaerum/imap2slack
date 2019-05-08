@@ -17,6 +17,7 @@ extern crate core;
 
 use std::thread::sleep;
 use std::time;
+use std::convert::TryFrom;
 
 use native_tls::TlsConnector;
 use imap::Client;
@@ -125,7 +126,7 @@ fn main() {
         let mut timestamp: Option<DateTime<Utc>> = None;
         if DEFAULT.use_timestamp() {
             timestamp = Some(DEFAULT.get_timestamp());
-            search_args = vec![SEARCH::SINCE(timestamp.clone().unwrap())];
+            search_args = vec![SEARCH::SINCE(timestamp.clone().unwrap() - Duration::days(1))];
         } else {
             search_args = vec![SEARCH::UNSEEN];
         }
@@ -154,12 +155,13 @@ fn main() {
                 println!("---===( Fetch )===---");
             }
             let fetch = session.fetch_mail(&uids);
-            println!("{:?}", &fetch);
+            println!("The number of email return from fetch {}", &fetch.as_ref().map(|x| i32::try_from(x.len()).unwrap()).unwrap_or(-1));
             match fetch {
                 Ok(mails) => {
                     for mail in &mails {
                         if DEFAULT.debug() {
-                            println!("- {:?}", &mail);
+                            println!("uid: {}, flags: '{}', from: '{}', to: '{}', cc: '{}', bcc: '{}', reply_to: '{}', subject: '{}', date: '{}'",
+                                     &mail.uid, &mail.flags, &mail.from, &mail.to, &mail.cc, &mail.bcc, &mail.reply_to, &mail.subject, &mail.date);
                         }
 
                         if DEFAULT.use_timestamp() {
@@ -171,10 +173,8 @@ fn main() {
                             let mail_ts_utc = mail_ts_fixed.clone().with_timezone(&Utc);
 
 
-                            if DEFAULT.debug() {
-                                println!("---===( Compare Timestamp )===---\nLocal: {} - Mail: {}\n{}\n", datetime, &mail_ts_utc,
-                                         if mail_ts_utc < datetime {"Local DT the biggest"} else {"Mail DT the biggest"});
-                            }
+                            println!("---===( Compare Timestamp )===---\nLocal: {} - Mail: {}\n{}\n", datetime, &mail_ts_utc,
+                                     if mail_ts_utc < datetime {"Local DT the biggest"} else {"Mail DT the biggest"});
                             if mail_ts_utc < datetime {
                                 continue;
                             }
