@@ -23,7 +23,7 @@ impl<T: Read + Write> Search for Session<T> {
         let criteria: String = filter.iter().map(|s| format!("{} ", search2str(s))).collect();
         println!("IMAP - Search command: 'SEARCH {}'", criteria.trim());
         let search_result = self.run_command_and_read_response(&format!("SEARCH {}", criteria.trim()));
-        println!("Search; {:?}", &search_result);
+        println!("Search: {:?}", &search_result);
         match search_result {
             Ok(response) => {
                 let mut uids: Vec<usize> = Vec::new();

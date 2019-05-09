@@ -173,7 +173,7 @@ fn main() {
                             let mail_ts_utc = mail_ts_fixed.clone().with_timezone(&Utc);
 
 
-                            println!("---===( Compare Timestamp )===---\nLocal: {} - Mail: {}\n{}\n", datetime, &mail_ts_utc,
+                            println!("---===( Compare Timestamp )===---\nLocal: {} - Mail: {}\n{}\n\n", datetime, &mail_ts_utc,
                                      if mail_ts_utc < datetime {"Local DT the biggest"} else {"Mail DT the biggest"});
                             if mail_ts_utc < datetime {
                                 continue;
