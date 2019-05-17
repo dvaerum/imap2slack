@@ -59,12 +59,24 @@ impl Config {
 
         if ts_file.exists() {
             println!("Open timestamp file - {}", format!("{}", Utc::now().timestamp()));
+
+            let _trim: &[_] = &[' ', '\t', '\n'];
             let ts_str = fs::read_to_string(ts_file).
                 expect(format!("Something went wrong with open the file '{}'", ts_file.to_str().unwrap()).as_ref()).
-                trim().to_owned();
-            let timestamp = i64::from_str(ts_str.as_str()).unwrap_or(Utc::now().timestamp());
+                trim_matches(_trim).to_owned();
+
+            let mut timestamp;
+            let tmp_timestamp = i64::from_str(ts_str.as_str());
+            if tmp_timestamp.is_ok() {
+                timestamp = tmp_timestamp.unwrap()
+            } else {
+                println!("Error: The timestamp file did not contain a timestamp");
+                timestamp = Utc::now().timestamp();
+            }
+
             fs::write(ts_file, format!("{}", Utc::now().timestamp()).as_bytes()).
                 expect(format!("Something went wrong with writing the file '{}'", ts_file.to_str().unwrap()).as_ref());
+
             return DateTime::from_utc(NaiveDateTime::from_timestamp(timestamp, 0), Utc);
         } else {
             println!("Create timestamp file");
